@@ -23,13 +23,13 @@ interface Ec2Filter {
   Values: string[];
 }
 
-export async function listEC2Runners(
+export async function listRunners(
   filters: Runners.ListRunnerFilters | undefined = undefined,
 ): Promise<Runners.RunnerList[]> {
   const ec2Filters = constructFilters(filters);
   const runners: Runners.RunnerList[] = [];
   for (const filter of ec2Filters) {
-    runners.push(...(await getRunners(filter)));
+    runners.push(...(await getEC2Runners(filter)));
   }
   return runners;
 }
@@ -56,7 +56,7 @@ function constructFilters(filters?: Runners.ListRunnerFilters): Ec2Filter[][] {
   return ec2Filters;
 }
 
-async function getRunners(ec2Filters: Ec2Filter[]): Promise<Runners.RunnerList[]> {
+async function getEC2Runners(ec2Filters: Ec2Filter[]): Promise<Runners.RunnerList[]> {
   const ec2 = getTracedAWSV3Client(new EC2Client({ region: process.env.AWS_REGION }));
   const runners: Runners.RunnerList[] = [];
   let nextToken;
@@ -118,7 +118,7 @@ function generateFleetOverrides(
   return result;
 }
 
-export async function createRunner(runnerParameters: Runners.RunnerInputParameters): Promise<string[]> {
+export async function createEC2Runner(runnerParameters: Runners.RunnerInputParameters): Promise<string[]> {
   logger.debug('Runner configuration.', {
     runner: {
       configuration: {
@@ -130,7 +130,7 @@ export async function createRunner(runnerParameters: Runners.RunnerInputParamete
   const ec2Client = getTracedAWSV3Client(new EC2Client({ region: process.env.AWS_REGION }));
   const amiIdOverride = await getAmiIdOverride(runnerParameters);
 
-  const fleet: CreateFleetResult = await createInstances(runnerParameters, amiIdOverride, ec2Client);
+  const fleet: CreateFleetResult = await createEC2Instances(runnerParameters, amiIdOverride, ec2Client);
 
   const instances: string[] = await processFleetResult(fleet, runnerParameters);
 
@@ -174,7 +174,7 @@ async function processFleetResult(
       logger.warn(`Create fleet failed, initatiing fall back to on demand instances.`);
       logger.debug('Create fleet failed.', { data: fleet.Errors });
       const numberOfInstances = runnerParameters.numberOfRunners - instances.length;
-      const instancesOnDemand = await createRunner({
+      const instancesOnDemand = await createEC2Runner({
         ...runnerParameters,
         numberOfRunners: numberOfInstances,
         onDemandFailoverOnError: ['InsufficientInstanceCapacity'],
@@ -213,7 +213,7 @@ async function getAmiIdOverride(runnerParameters: Runners.RunnerInputParameters)
   }
 }
 
-async function createInstances(
+async function createEC2Instances(
   runnerParameters: Runners.RunnerInputParameters,
   amiIdOverride: string | undefined,
   ec2Client: EC2Client,

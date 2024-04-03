@@ -2,6 +2,8 @@ import { DefaultTargetCapacityType, SpotAllocationStrategy } from '@aws-sdk/clie
 
 export type RunnerType = 'Org' | 'Repo';
 
+export type RunnerPlatformType = 'EC2' | 'Fargate';
+
 export interface RunnerList {
   instanceId: string;
   launchTime?: Date;

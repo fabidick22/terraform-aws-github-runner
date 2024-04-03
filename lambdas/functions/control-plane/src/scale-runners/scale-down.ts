@@ -3,7 +3,7 @@ import { createChildLogger } from '@terraform-aws-github-runner/aws-powertools-u
 import moment from 'moment';
 
 import { createGithubAppAuth, createGithubInstallationAuth, createOctoClient } from '../gh-auth/gh-auth';
-import { bootTimeExceeded, listEC2Runners, terminateRunner } from './../aws/runners';
+import { bootTimeExceeded, listRunners, terminateRunner } from './../aws/runners';
 import { RunnerInfo, RunnerList } from './../aws/runners.d';
 import { GhRunners, githubCache } from './cache';
 import { ScalingDownConfig, getEvictionStrategy, getIdleRunnerCount } from './scale-down-config';
@@ -206,8 +206,8 @@ function newestFirstStrategy(a: RunnerInfo, b: RunnerInfo): number {
   return oldestFirstStrategy(a, b) * -1;
 }
 
-async function listRunners(environment: string) {
-  return await listEC2Runners({
+async function listEC2Runners(environment: string) { // TODO: We can delete this function and use listRunners directly
+  return await listRunners({
     environment,
   });
 }
@@ -221,7 +221,7 @@ export async function scaleDown(): Promise<void> {
   const scaleDownConfigs = JSON.parse(process.env.SCALE_DOWN_CONFIG) as [ScalingDownConfig];
   const environment = process.env.ENVIRONMENT;
 
-  const ec2Runners = await listRunners(environment);
+  const ec2Runners = await listEC2Runners(environment);
   const activeEc2RunnersCount = ec2Runners.length;
   logger.info(`Found: '${activeEc2RunnersCount}' active GitHub EC2 runner instances before clean-up.`);
 
@@ -233,6 +233,6 @@ export async function scaleDown(): Promise<void> {
   const runners = filterRunners(ec2Runners);
   await evaluateAndRemoveRunners(runners, scaleDownConfigs);
 
-  const activeEc2RunnersCountAfter = (await listRunners(environment)).length;
+  const activeEc2RunnersCountAfter = (await listEC2Runners(environment)).length;
   logger.info(`Found: '${activeEc2RunnersCountAfter}' active GitHub EC2 runners instances after clean-up.`);
 }

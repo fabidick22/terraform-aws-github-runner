@@ -4,7 +4,7 @@ import { getParameter, putParameter } from '@terraform-aws-github-runner/aws-ssm
 import yn from 'yn';
 
 import { createGithubAppAuth, createGithubInstallationAuth, createOctoClient } from '../gh-auth/gh-auth';
-import { createRunner, listEC2Runners } from './../aws/runners';
+import { createEC2Runner, listRunners } from './../aws/runners';
 import { RunnerInputParameters } from './../aws/runners.d';
 import ScaleError from './ScaleError';
 
@@ -203,7 +203,7 @@ export async function createRunners(
   ec2RunnerConfig: CreateEC2RunnerConfig,
   ghClient: Octokit,
 ): Promise<void> {
-  const instances = await createRunner({
+  const instances = await createEC2Runner({
     runnerType: githubRunnerConfig.runnerType,
     runnerOwner: githubRunnerConfig.runnerOwner,
     numberOfRunners: 1,
@@ -277,7 +277,7 @@ export async function scaleUp(eventSource: string, payload: ActionRequestMessage
   const ghAuth = await createGithubInstallationAuth(installationId, ghesApiUrl);
   const githubInstallationClient = await createOctoClient(ghAuth.token, ghesApiUrl);
   if (!enableJobQueuedCheck || (await isJobQueued(githubInstallationClient, payload))) {
-    const currentRunners = await listEC2Runners({
+    const currentRunners = await listRunners({
       environment,
       runnerType,
       runnerOwner,
